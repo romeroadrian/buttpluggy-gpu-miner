@@ -1,0 +1,17 @@
+[package]
+name = "buttpluggy-gpu-miner"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+alloy-primitives = { version = "0.5", features = ["rand"] }
+byteorder = "1.5"
+console = "0.15"
+fs4 = "0.7"
+ocl = "0.19"
+rand = "0.8"
+separator = "0.4.1"
+terminal_size = "0.3.0"
+tiny-keccak = "2.0"
