@@ -159,22 +159,38 @@ static inline void keccakf(ulong *a)
   iteration(0x8000000080008008); // iteration 24
 }
 
-#if LEADING_ZEROES == 8
+#if LEADING_ZEROES == 16
 #define hasLeading(d) (!(((uint*)d)[0]) && !(((uint*)d)[1]))
-#elif LEADING_ZEROES == 7
+#elif LEADING_ZEROES == 15
+#define hasLeading(d) (!(((uint*)d)[0]) && !(((uint*)d)[1] & 0xf0ffffffu))
+#elif LEADING_ZEROES == 14
 #define hasLeading(d) (!(((uint*)d)[0]) && !(((uint*)d)[1] & 0x00ffffffu))
-#elif LEADING_ZEROES == 6
+#elif LEADING_ZEROES == 13
+#define hasLeading(d) (!(((uint*)d)[0]) && !(((uint*)d)[1] & 0x00f0ffffu))
+#elif LEADING_ZEROES == 12
 #define hasLeading(d) (!(((uint*)d)[0]) && !(((uint*)d)[1] & 0x0000ffffu))
-#elif LEADING_ZEROES == 5
+#elif LEADING_ZEROES == 11
+#define hasLeading(d) (!(((uint*)d)[0]) && !(((uint*)d)[1] & 0x0000f0ffu))
+#elif LEADING_ZEROES == 10
 #define hasLeading(d) (!(((uint*)d)[0]) && !(((uint*)d)[1] & 0x000000ffu))
-#elif LEADING_ZEROES == 4
+#elif LEADING_ZEROES == 9
+#define hasLeading(d) (!(((uint*)d)[0]) && !(((uint*)d)[1] & 0x000000f0u))
+#elif LEADING_ZEROES == 8
 #define hasLeading(d) (!(((uint*)d)[0]))
-#elif LEADING_ZEROES == 3
+#elif LEADING_ZEROES == 7
+#define hasLeading(d) (!(((uint*)d)[0] & 0xf0ffffffu))
+#elif LEADING_ZEROES == 6
 #define hasLeading(d) (!(((uint*)d)[0] & 0x00ffffffu))
-#elif LEADING_ZEROES == 2
+#elif LEADING_ZEROES == 5
+#define hasLeading(d) (!(((uint*)d)[0] & 0x00f0ffffu))
+#elif LEADING_ZEROES == 4
 #define hasLeading(d) (!(((uint*)d)[0] & 0x0000ffffu))
-#elif LEADING_ZEROES == 1
+#elif LEADING_ZEROES == 3
+#define hasLeading(d) (!(((uint*)d)[0] & 0x0000f0ffu))
+#elif LEADING_ZEROES == 2
 #define hasLeading(d) (!(((uint*)d)[0] & 0x000000ffu))
+#elif LEADING_ZEROES == 1
+#define hasLeading(d) (!(((uint*)d)[0] & 0x000000f0u))
 #else
 static inline bool hasLeading(uchar const *d)
 {
