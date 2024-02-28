@@ -194,9 +194,13 @@ static inline void keccakf(ulong *a)
 #else
 static inline bool hasLeading(uchar const *d)
 {
-#pragma unroll
-  for (uint i = 0; i < LEADING_ZEROES; ++i) {
+  uint nibbles = LEADING_ZEROES / 2;
+  #pragma unroll
+  for (uint i = 0; i < nibbles; ++i) {
     if (d[i] != 0) return false;
+  }
+  if(LEADING_ZEROES % 2 == 1 && d[nibbles] > 15 ) {
+    return false;
   }
   return true;
 }
