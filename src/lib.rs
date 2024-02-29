@@ -97,10 +97,10 @@ pub fn gpu(config: Config) -> ocl::Result<()> {
     let term = Term::stdout();
 
     // set up a platform to use
-    let platform = Platform::new(ocl::core::default_platform()?);
+    let platform = Platform::list()[config.gpu_device as usize];
 
     // set up the device to use
-    let device = Device::by_idx_wrap(platform, config.gpu_device as usize)?;
+    let device = Device::first(platform)?;
 
     // set up the context to use
     let context = Context::builder()
@@ -246,10 +246,11 @@ pub fn gpu(config: Config) -> ocl::Result<()> {
                 // display information about the current search criteria
                 term.write_line(&format!(
                     "current search space: {}xxxxxxxx{:08x}\t\t\
-                   difficulty: {}",
+                   difficulty: {} GPU: {}",
                     hex::encode(salt),
                     BigEndian::read_u64(&view_buf),
                     config.difficulty,
+                    device.name()?,
                 ))?;
 
                 // display recently found solutions based on terminal height
