@@ -333,7 +333,8 @@ pub fn gpu(config: Config) -> ocl::Result<()> {
             hash.finalize(&mut res);
 
             let output = format!(
-                "0x{} -> 0x{}",
+                "{:>4} - 0x{} -> 0x{}",
+                mod_1024(res) + 1,
                 hex::encode(buttpluggy_nonce),
                 hex::encode(res),
             );
@@ -348,6 +349,14 @@ pub fn gpu(config: Config) -> ocl::Result<()> {
             found += 1;
         }
     }
+}
+
+pub fn mod_1024(array: [u8; 32]) -> u32 {
+    let mut result: u32 = 0;
+    for byte in array.iter() {
+        result = (result * 256 + *byte as u32) % 1024;
+    }
+    result
 }
 
 #[track_caller]
