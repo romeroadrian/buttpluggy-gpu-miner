@@ -8,4 +8,4 @@ Adapted from https://github.com/0age/create2crunch
 
 1. Install rust
 2. Install nvidia drivers and cuda toolkit
-3. Run with `cargo run --release [WALLET]
+3. Run with `cargo run --release [WALLET]`
