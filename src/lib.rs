@@ -1,4 +1,4 @@
-#![warn(unused_crate_dependencies, unreachable_pub)]
+#![warn(unreachable_pub)]
 #![deny(unused_must_use, rust_2018_idioms)]
 
 use alloy_primitives::{hex, FixedBytes};
@@ -15,6 +15,11 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use terminal_size::{terminal_size, Height};
 use tiny_keccak::{Hasher, Keccak};
 
+use ethers::types::U256;
+
+pub mod web3_utils;
+use web3_utils::{ContractClient, have_owner};
+
 // workset size (tweak this!)
 const WORK_SIZE: u32 = 0x4000000; // max. 0x15400000 to abs. max 0xffffffff
 
@@ -30,62 +35,51 @@ pub struct Config {
 }
 
 impl Config {
-    pub fn new(mut args: std::env::Args) -> Result<Self, &'static str> {
-        // get args, skipping first arg (program name)
+    pub fn new(
+        mut args: std::env::Args,
+        salt: [u8; 32],
+        difficulty: u8,
+    ) -> Result<Self, Box<dyn std::error::Error>> {
+        // Skip first arg (program name)
         args.next();
 
+        // Get calling_address_string from args
         let Some(calling_address_string) = args.next() else {
-            return Err("didn't get a calling_address argument");
+            return Err("didn't get a calling_address argument".into());
         };
-        let Some(salt_string) = args.next() else {
-            return Err("didn't get a salt argument");
-        };
-        let Some(difficulty_string) = args.next() else {
-            return Err("didn't get a difficulty argument");
-        };
+
+        // Get gpu_device from args, default to 0
         let gpu_device_string = match args.next() {
             Some(arg) => arg,
-            None => String::from("0"), // default to device 0
+            None => String::from("0"),
         };
 
-        // convert main arguments from hex string to vector of bytes
-        let Ok(calling_address_vec) = hex::decode(calling_address_string) else {
-            return Err("could not decode calling address argument");
-        };
-        let Ok(salt_vec) = hex::decode(salt_string) else {
-            return Err("could not decode salt argument");
-        };
+        // Convert calling_address from hex string to [u8; 20]
+        let calling_address_vec = hex::decode(calling_address_string)?;
+        let calling_address: [u8; 20] = calling_address_vec
+            .try_into()
+            .map_err(|_| "invalid length for calling address argument")?;
 
-        // convert from vector to fixed array
-        let Ok(calling_address) = calling_address_vec.try_into() else {
-            return Err("invalid length for calling address argument");
-        };
-        let Ok(salt) = salt_vec.try_into() else {
-            return Err("invalid length for salt argument");
-        };
+        // Convert gpu_device to u8
+        let gpu_device = gpu_device_string
+            .parse::<u8>()
+            .map_err(|_| "invalid gpu device value")?;
 
-        // convert gpu arguments to u8 values
-        let Ok(gpu_device) = gpu_device_string.parse::<u8>() else {
-            return Err("invalid gpu device value");
-        };
-        let Ok(difficulty) = difficulty_string.parse::<u8>() else {
-            return Err("invalid difficulty value supplied");
-        };
-
+        // Validate difficulty
         if difficulty > 20 {
-            return Err("invalid value for difficulty argument. (valid: 0..=20)");
+            return Err("invalid value for difficulty argument (valid: 0..=20)".into());
         }
 
         Ok(Self {
             calling_address,
             salt,
-            gpu_device,
             difficulty,
+            gpu_device,
         })
     }
 }
 
-pub fn gpu(config: Config) -> ocl::Result<()> {
+pub async fn gpu(client: &ContractClient, config: Config) -> ocl::Result<()> {
     // (create if necessary) and open a file where found salts will be written
     let file = output_file();
 
@@ -246,11 +240,18 @@ pub fn gpu(config: Config) -> ocl::Result<()> {
                 // display information about the current search criteria
                 term.write_line(&format!(
                     "current search space: {}xxxxxxxx{:08x}\t\t\
-                   difficulty: {} GPU: {}",
+                    GPU: {}",
                     hex::encode(salt),
                     BigEndian::read_u64(&view_buf),
-                    config.difficulty,
                     device.name()?,
+                ))?;
+
+                // display information about the current salt
+                term.write_line(&format!(
+                    "difficulty: {}\t\t\
+                    current contract salt: {}",
+                    config.difficulty,
+                    hex::encode(config.salt),
                 ))?;
 
                 // display recently found solutions based on terminal height
@@ -332,11 +333,18 @@ pub fn gpu(config: Config) -> ocl::Result<()> {
             let mut res: [u8; 32] = [0; 32];
             hash.finalize(&mut res);
 
+            //let token_id = U256::from(1);
+            let have_owner = have_owner(&client, U256::from(mod_1024(res) + 1)) //.await?;
+                .await
+                .map_err(|e| ocl::Error::from(format!("web3 error: {}", e)))?;
+            if have_owner {
+                continue;
+            }
+
             let output = format!(
-                "{:>4} - 0x{} -> 0x{}",
+                "{:>4} - 0x{}",
                 mod_1024(res) + 1,
                 hex::encode(buttpluggy_nonce),
-                hex::encode(res),
             );
 
             found_list.push(output.to_string());
